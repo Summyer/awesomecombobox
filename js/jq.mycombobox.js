@@ -8,14 +8,33 @@
         console.log.apply(console, arguments);
     };
 
+    //是否带有title属性,有就在前面显示,没有就不显示
+    function _hasTitle(opt){
+        var label = '';
+        if(opt.title){
+            label = '<label>'+opt.title+'</label> ';
+            return label;
+        }else{
+            return '';
+        }
+    }
+    //自定义click事件
+    function _checkClick(opt,target){
+        if(opt.click){
+            //定义了click这个事件
+            opt.click.call(target, $(target).index(), $(target).attr('val'));
+        }
+    }
     //首先是确定以怎么样的方式去渲染组件
     //选择使用选择器方式 $('selector').combobox(options);
     //这种是为jq对象添加函数
     $.fn.combobox = function(options) {
         console.log('my_combobox init');
+        //得到绑定对象
+        var self = $(this);
         var defaultOpt = {
             data:[],//下拉的数据
-            defaultTextIndex:0,//默认值的下标
+            defaultValue:0,//组件第一次加载文本框显示的文本
             title:'',//label
             width:'200px',//文本框宽度
             height:'20px',//文本框高度
@@ -33,6 +52,24 @@
         $.extend(params, defaultOpt);
         $.extend(params, options);
 
+        var label = _hasTitle(params);
+        if(label != ''){
+            self.before(label);
+        }
+        //初始化默认值
+        if(params.data){
+            var defaultText = params.data[params.defaultValue].text;
+            self.val(defaultText);
+        }
+        //指定下拉组件的宽度
+        if(params.width){
+            self.css({width:params.width});
+        }
+        //文本框的高度
+        if(params.height){
+            self.css({height:params.height});
+        }
+
         //得到下拉内容容器对象,先在页面中定义好
         var list;
         if(options.content){
@@ -43,15 +80,13 @@
             var data = options.data;
             var li = '';
             for(var index in  data){
-                li += '<li>'+data[index].text+'</li>';
+                li += '<li val='+data[index].value+'>'+data[index].text+'</li>';
             }
             ul += li + '</ul>';
-            //$('body').append(ul);
-            //list = $('.list_item');
             list = $(ul);
             var lis = list.children();
             log(lis);
-            lis.each(function(i,n){
+            lis.each(function(i){
                 var li = $(this);
                 if(i % 2 == 0){
                     li.addClass('odd');
@@ -61,8 +96,10 @@
             });
             $('body').append(list);
         }
-        //得到绑定对象
-        var self = $(this);
+        if(params.select_max_height){
+            list.css({'max-height':params.select_max_height});
+        }
+
         //添加样式
         self.addClass('ec');
         //得到位置
@@ -80,9 +117,17 @@
         //list.show();
         //alert(list.width());
         //效果已经出来,只差事件绑定了
+
         self.bind('click',function(e){
             e.stopPropagation();
-            list.toggle();
+            if(params.transition){
+                list.animate({
+                    display:'block',
+                    height:'toggle'
+                },400);
+            }else{
+                list.toggle();
+            }
         });
         //点击空白 下拉消失
         $(document).bind('click', function(e){
@@ -93,6 +138,8 @@
         //点击条目设置值
         list.children().click(function () {
             self.val($(this).text());
+            _checkClick(params,this);
+            // params.click && params.click.call(this, $(this).index(), $(this).attr('val'));
         });
     }
 }(jQuery,document));
